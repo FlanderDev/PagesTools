@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PayCode</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- QRCode Generator Library -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="h-full bg-slate-50 text-slate-800 flex flex-col justify-between selection:bg-indigo-500 selection:text-white text-xs">
+
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-7xl mx-auto px-2 sm:px-3 h-10 flex items-center justify-between">
+            <div class="flex items-center space-x-1.5">
+                <div class="bg-indigo-600 text-white p-1 rounded-md shadow-sm">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
+                </div>
+                <div>
+                    <h1 class="text-xs font-bold text-slate-900 tracking-tight">PayCode</h1>
+                </div>
+            </div>
+            <div class="flex items-center space-x-1.5">
+                <button onclick="loadExample()" class="inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors">
+                    Load Example
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-2 sm:px-3 py-2 flex-grow w-full">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-2 items-start">
+            
+            <!-- Left Column: Input and Extracted Data -->
+            <div class="lg:col-span-6 space-y-2">
+                <!-- Textarea Card -->
+                <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-2 transition-all">
+                    <div class="flex items-center justify-between mb-1">
+                        <label for="inputData" class="font-semibold text-slate-900">Payment Details Text</label>
+                        <span class="text-[10px] text-slate-400">Smart extraction active</span>
+                    </div>
+                    <textarea id="inputData" rows="3" oninput="parseInput()" 
+                        class="w-full rounded border border-slate-300 p-1.5 font-mono text-slate-700 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all resize-y bg-slate-50/50"
+                        placeholder="Account holder: INCUTEC BV&#10;IBAN: BE94 7310 7599 3714&#10;BIC: KREDBEBB&#10;Amount: 150.00 EUR&#10;Reference: Invoice #2026-089"></textarea>
+                </div>
+
+                <!-- Extracted & Editable Fields Form -->
+                <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-2 transition-all">
+                    <div class="flex items-center justify-between mb-1.5 border-b border-slate-100 pb-1">
+                        <h2 class="font-semibold text-slate-900">Extracted Confirmation</h2>
+                        <span id="extractionStatus" class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-700">Ready</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                        <!-- Beneficiary Name -->
+                        <div class="sm:col-span-2">
+                            <label class="block font-medium text-slate-600 mb-0.5">Account Holder / Beneficiary Name</label>
+                            <input type="text" id="fieldName" oninput="updateAll()" 
+                                class="w-full rounded border border-slate-300 px-2 py-1 text-slate-800 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                                placeholder="e.g. INCUTEC BV">
+                        </div>
+
+                        <!-- IBAN -->
+                        <div class="sm:col-span-2">
+                            <label class="block font-medium text-slate-600 mb-0.5">IBAN <span class="text-rose-500">*</span></label>
+                            <input type="text" id="fieldIban" oninput="updateAll()" 
+                                class="w-full rounded border border-slate-300 px-2 py-1 font-mono uppercase text-slate-800 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                                placeholder="e.g. BE94731075993714">
+                        </div>
+
+                        <!-- BIC -->
+                        <div>
+                            <label class="block font-medium text-slate-600 mb-0.5">BIC / SWIFT</label>
+                            <input type="text" id="fieldBic" oninput="updateAll()" 
+                                class="w-full rounded border border-slate-300 px-2 py-1 font-mono uppercase text-slate-800 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                                placeholder="e.g. KREDBEBB">
+                        </div>
+
+                        <!-- Amount -->
+                        <div>
+                            <label class="block font-medium text-slate-600 mb-0.5">Amount (EUR)</label>
+                            <input type="number" step="0.01" id="fieldAmount" oninput="updateAll()" 
+                                class="w-full rounded border border-slate-300 px-2 py-1 text-slate-800 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                                placeholder="e.g. 150.00">
+                        </div>
+
+                        <!-- Reference Type -->
+                        <div>
+                            <label class="block font-medium text-slate-600 mb-0.5">Reference Type</label>
+                            <select id="fieldRefType" onchange="updateAll()" class="w-full rounded border border-slate-300 px-2 py-1 text-slate-800 bg-white focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
+                                <option value="unstructured">Unstructured Message</option>
+                                <option value="structured">Structured (Creditor Ref)</option>
+                            </select>
+                        </div>
+
+                        <!-- Reference Value -->
+                        <div>
+                            <label class="block font-medium text-slate-600 mb-0.5">Reference / Remittance Text</label>
+                            <input type="text" id="fieldReference" oninput="updateAll()" 
+                                class="w-full rounded border border-slate-300 px-2 py-1 text-slate-800 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                                placeholder="e.g. Invoice 2026-089">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payto Link Card -->
+                <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-2 transition-all">
+                    <div class="flex items-center justify-between mb-1">
+                        <h3 class="font-semibold text-slate-900">RFC 8905 Payto Link</h3>
+                        <button onclick="copyPaytoLink()" class="text-indigo-600 font-medium hover:text-indigo-800 flex items-center space-x-1">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+                            <span id="copyText">Copy</span>
+                        </button>
+                    </div>
+                    <div class="bg-slate-50 border border-slate-200 rounded p-1.5 overflow-x-auto mb-1">
+                        <a id="paytoLinkAnchor" href="#" class="font-mono text-indigo-600 hover:text-indigo-800 underline whitespace-nowrap block text-[11px]" title="Click to open in payment app">payto://...</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Generated QR Codes Grid (6 Standards + C24) -->
+            <div class="lg:col-span-6 space-y-2">
+                <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-2">
+                    <div class="flex items-center justify-between mb-1.5 border-b border-slate-100 pb-1">
+                        <h3 class="font-semibold text-slate-900">Generated Payment QR Codes</h3>
+                        <span class="text-[10px] text-slate-400">EPC, GiroCode, Bezahl, EPS, BySquare, HUB3, C24</span>
+                    </div>
+
+                    <div id="qrError" class="text-[11px] text-rose-600 mb-1 hidden font-medium"></div>
+
+                    <!-- 7 QR Codes Grid -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        
+                        <!-- 1. EPC QR -->
+                        <div class="bg-slate-50 border border-slate-200 rounded p-1.5 flex flex-col items-center text-center">
+                            <span class="font-bold text-[11px] text-slate-700 mb-1">EPC QR</span>
+                            <div id="qr-epc" class="bg-white p-1 rounded border border-slate-200 mb-1 flex items-center justify-center min-h-[90px] min-w-[90px] w-full"></div>
+                            <div class="flex gap-1 w-full text-[10px]">
+                                <button onclick="downloadQrSvg('epc')" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-0.5 px-1 rounded">SVG</button>
+                                <button onclick="downloadQrPng('epc')" class="flex-1 bg-slate-800 hover:bg-slate-900 text-white py-0.5 px-1 rounded">PNG</button>
+                            </div>
+                        </div>
+
+                        <!-- 2. GiroCode -->
+                        <div class="bg-slate-50 border border-slate-200 rounded p-1.5 flex flex-col items-center text-center">
+                            <span class="font-bold text-[11px] text-slate-700 mb-1">GiroCode</span>
+                            <div id="qr-girocode" class="bg-white p-1 rounded border border-slate-200 mb-1 flex items-center justify-center min-h-[90px] min-w-[90px] w-full"></div>
+                            <div class="flex gap-1 w-full text-[10px]">
+                                <button onclick="downloadQrSvg('girocode')" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-0.5 px-1 rounded">SVG</button>
+                                <button onclick="downloadQrPng('girocode')" class="flex-1 bg-slate-800 hover:bg-slate-900 text-white py-0.5 px-1 rounded">PNG</button>
+                            </div>
+                        </div>
+
+                        <!-- 3. BezahlCode -->
+                        <div class="bg-slate-50 border border-slate-200 rounded p-1.5 flex flex-col items-center text-center">
+                            <span class="font-bold text-[11px] text-slate-700 mb-1">BezahlCode</span>
+                            <div id="qr-bezahlcode" class="bg-white p-1 rounded border border-slate-200 mb-1 flex items-center justify-center min-h-[90px] min-w-[90px] w-full"></div>
+                            <div class="flex gap-1 w-full text-[10px]">
+                                <button onclick="downloadQrSvg('bezahlcode')" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-0.5 px-1 rounded">SVG</button>
+                                <button onclick="downloadQrPng('bezahlcode')" class="flex-1 bg-slate-800 hover:bg-slate-900 text-white py-0.5 px-1 rounded">PNG</button>
+                            </div>
+                        </div>
+
+                        <!-- 4. EPS (Austria) -->
+                        <div class="bg-slate-50 border border-slate-200 rounded p-1.5 flex flex-col items-center text-center">
+                            <span class="font-bold text-[11px] text-slate-700 mb-1">EPS (Stuzza)</span>
+                            <div id="qr-eps" class="bg-white p-1 rounded border border-slate-200 mb-1 flex items-center justify-center min-h-[90px] min-w-[90px] w-full"></div>
+                            <div class="flex gap-1 w-full text-[10px]">
+                                <button onclick="downloadQrSvg('eps')" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-0.5 px-1 rounded">SVG</button>
+                                <button onclick="downloadQrPng('eps')" class="flex-1 bg-slate-800 hover:bg-slate-900 text-white py-0.5 px-1 rounded">PNG</button>
+                            </div>
+                        </div>
+
+                        <!-- 5. Pay by Square -->
+                        <div class="bg-slate-50 border border-slate-200 rounded p-1.5 flex flex-col items-center text-center">
+                            <span class="font-bold text-[11px] text-slate-700 mb-1">Pay by Square</span>
+                            <div id="qr-bysquare" class="bg-white p-1 rounded border border-slate-200 mb-1 flex items-center justify-center min-h-[90px] min-w-[90px] w-full"></div>
+                            <div class="flex gap-1 w-full text-[10px]">
+                                <button onclick="downloadQrSvg('bysquare')" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-0.5 px-1 rounded">SVG</button>
+                                <button onclick="downloadQrPng('bysquare')" class="flex-1 bg-slate-800 hover:bg-slate-900 text-white py-0.5 px-1 rounded">PNG</button>
+                            </div>
+                        </div>
+
+                        <!-- 6. HUB3 (Croatia) -->
+                        <div class="bg-slate-50 border border-slate-200 rounded p-1.5 flex flex-col items-center text-center">
+                            <span class="font-bold text-[11px] text-slate-700 mb-1">HUB3 (CRO)</span>
+                            <div id="qr-hub3" class="bg-white p-1 rounded border border-slate-200 mb-1 flex items-center justify-center min-h-[90px] min-w-[90px] w-full"></div>
+                            <div class="flex gap-1 w-full text-[10px]">
+                                <button onclick="downloadQrSvg('hub3')" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-0.5 px-1 rounded">SVG</button>
+                                <button onclick="downloadQrPng('hub3')" class="flex-1 bg-slate-800 hover:bg-slate-900 text-white py-0.5 px-1 rounded">PNG</button>
+                            </div>
+                        </div>
+
+                        <!-- 7. C24 Standard -->
+                        <div class="bg-slate-50 border border-slate-200 rounded p-1.5 flex flex-col items-center text-center">
+                            <span class="font-bold text-[11px] text-slate-700 mb-1">C24 Standard</span>
+                            <div id="qr-c24" class="bg-white p-1 rounded border border-slate-200 mb-1 flex items-center justify-center min-h-[90px] min-w-[90px] w-full"></div>
+                            <div class="flex gap-1 w-full text-[10px]">
+                                <button onclick="downloadQrSvg('c24')" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-0.5 px-1 rounded">SVG</button>
+                                <button onclick="downloadQrPng('c24')" class="flex-1 bg-slate-800 hover:bg-slate-900 text-white py-0.5 px-1 rounded">PNG</button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-white border-t border-slate-200 py-1.5 mt-2 text-center text-[10px] text-slate-500">
+        <p>GitHub Pages Ready &bull; Client-side SEPA & National QR Standards</p>
+    </footer>
+
+    <script>
+        const sampleText = `Account holder: INCUTEC BV
+IBAN: BE94 7310 7599 3714
+BIC: KREDBEBB
+Amount: 150.00 EUR
+Reference: Invoice 2026-089`;
+
+        function loadExample() {
+            document.getElementById('inputData').value = sampleText;
+            parseInput();
+        }
+
+        // Validation helpers mirroring standard ibantools logic
+        function isValidIBAN(iban) {
+            if (!iban) return false;
+            const clean = iban.replace(/[\s]+/gu, '').toUpperCase();
+            if (clean.length < 15 || clean.length > 34) return false;
+            const rearranged = clean.slice(4) + clean.slice(0, 4);
+            let digits = "";
+            for (let i = 0; i < rearranged.length; i++) {
+                const code = rearranged.charCodeAt(i);
+                if (code >= 65 && code <= 90) {
+                    digits += (code - 55).toString();
+                } else {
+                    digits += rearranged.charAt(i);
+                }
+            }
+            let remainder = 0;
+            for (let i = 0; i < digits.length; i++) {
+                remainder = (remainder * 10 + parseInt(digits.charAt(i), 10)) % 97;
+            }
+            return remainder === 1;
+        }
+
+        function isValidBIC(bic) {
+            if (!bic) return true;
+            return /^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/u.test(bic.trim().toUpperCase());
+        }
+
+        function singleLine(value, field, maxLength) {
+            const text = String(value ?? "").trim();
+            if (/[\u0000-\u001F\u007F]/u.test(text)) {
+                throw new Error(`${field} must not contain control characters or line breaks.`);
+            }
+            if (maxLength && Array.from(text).length > maxLength) {
+                throw new Error(`${field} must be at most ${maxLength} characters.`);
+            }
+            return text;
+        }
+
+        function buildEpc06912Payload({
+            beneficiaryName,
+            iban,
+            bic = "",
+            amount = "",
+            purposeCode = "",
+            remittanceInformation = "",
+            beneficiaryToOriginatorInformation = "",
+        }) {
+            const name = singleLine(beneficiaryName, "Beneficiary name", 70);
+            const account = String(iban ?? "").replace(/[\s]+/gu, "").toUpperCase();
+            const bankCode = String(bic ?? "").trim().toUpperCase();
+            const paymentAmount = singleLine(amount, "Amount", 13);
+            const purpose = singleLine(purposeCode, "Purpose code", 4);
+            const remittance = singleLine(remittanceInformation, "Remittance information", 140);
+            const additionalInfo = singleLine(
+                beneficiaryToOriginatorInformation,
+                "Beneficiary-to-originator information",
+                70,
+            );
+
+            if (!name) throw new Error("Beneficiary name is required.");
+            if (!isValidIBAN(account)) throw new Error("IBAN is invalid.");
+            if (bankCode && !isValidBIC(bankCode)) throw new Error("BIC is invalid.");
+
+            if (paymentAmount) {
+                if (!/^EUR(?:0|[1-9]\d{0,8})(?:\.\d{1,2})?$/u.test(paymentAmount)) {
+                    throw new Error("Amount must look like EUR12.34, using EUR and a decimal point.");
+                }
+                if (Number(paymentAmount.slice(3)) <= 0) {
+                    throw new Error("Amount must be greater than zero.");
+                }
+            }
+
+            if (purpose && !/^[A-Z]{4}$/u.test(purpose)) {
+                throw new Error("Purpose code must be a four-letter ISO 20022 code.");
+            }
+
+            return [
+                "BCD",
+                "002",
+                "1",
+                "SCT",
+                bankCode,
+                name,
+                account,
+                paymentAmount,
+                purpose,
+                remittance,
+                additionalInfo,
+            ].join("\n");
+        }
+
+        function parseInput() {
+            const text = document.getElementById('inputData').value;
+            
+            const ibanRegex = /(?:iban[:\s]*)?([A-Z]{2}\d{2}[\s0-9A-Z]{10,30})/i;
+            const bicRegex = /(?:bic|swift)[:\s]*([A-Z0-9]{8,11})/i;
+            const nameRegex = /(?:account\s*holder|beneficiary|name|payee|to)[:\s]*([^\n\r]+)/i;
+            const amountRegex = /(?:amount|sum|total|due)[:\s]*(?:[€$£]|eur\s*)?([0-9]+[.,][0-9]{2})/i;
+            const refRegex = /(?:reference|ref|invoice|remittance|for)[:\s]*([^\n\r]+)/i;
+
+            let ibanMatch = text.match(ibanRegex);
+            let bicMatch = text.match(bicRegex);
+            let nameMatch = text.match(nameRegex);
+            let amountMatch = text.match(amountRegex);
+            let refMatch = text.match(refRegex);
+
+            if (ibanMatch) document.getElementById('fieldIban').value = ibanMatch[1].replace(/[\s]+/gu, '').toUpperCase();
+            if (bicMatch) document.getElementById('fieldBic').value = bicMatch[1].trim().toUpperCase();
+            if (nameMatch) document.getElementById('fieldName').value = nameMatch[1].trim();
+            if (amountMatch) document.getElementById('fieldAmount').value = amountMatch[1].replace(',', '.');
+            if (refMatch) document.getElementById('fieldReference').value = refMatch[1].trim();
+
+            if (!ibanMatch) {
+                const looseIban = text.match(/[A-Z]{2}\d{2}\s*[A-Z0-9]{4}\s*[A-Z0-9]{4}\s*[A-Z0-9]{4}\s*[A-Z0-9]{0,4}/);
+                if (looseIban) {
+                    document.getElementById('fieldIban').value = looseIban[0].replace(/[\s]+/gu, '').toUpperCase();
+                }
+            }
+
+            updateAll();
+        }
+
+        function updateAll() {
+            const name = document.getElementById('fieldName').value.trim();
+            const iban = document.getElementById('fieldIban').value.replace(/[\s]+/gu, '').toUpperCase();
+            const bic = document.getElementById('fieldBic').value.trim().toUpperCase();
+            const amountStr = document.getElementById('fieldAmount').value.trim();
+            const refType = document.getElementById('fieldRefType').value;
+            const reference = document.getElementById('fieldReference').value.trim();
+
+            const errorDiv = document.getElementById('qrError');
+            const statusBadge = document.getElementById('extractionStatus');
+            const paytoAnchor = document.getElementById('paytoLinkAnchor');
+
+            if (!isValidIBAN(iban)) {
+                errorDiv.textContent = "Please enter a valid IBAN with a passing Mod-97 checksum.";
+                errorDiv.classList.remove('hidden');
+                statusBadge.textContent = "Invalid IBAN";
+                statusBadge.className = "inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 text-amber-700";
+                
+                ['qr-epc', 'qr-girocode', 'qr-bezahlcode', 'qr-eps', 'qr-bysquare', 'qr-hub3', 'qr-c24'].forEach(id => {
+                    document.getElementById(id).innerHTML = '<span class="text-[10px] text-slate-400">Invalid IBAN</span>';
+                });
+                paytoAnchor.textContent = "payto://... (incomplete)";
+                paytoAnchor.href = "#";
+                return;
+            } else {
+                errorDiv.classList.add('hidden');
+                statusBadge.textContent = "Valid";
+                statusBadge.className = "inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-700";
+            }
+
+            let amountFormatted = "";
+            let amountVal = 0;
+            if (amountStr && !isNaN(amountStr) && parseFloat(amountStr) > 0) {
+                amountVal = parseFloat(amountStr);
+                amountFormatted = "EUR" + amountVal.toFixed(2);
+            }
+
+            try {
+                // 1. EPC QR & 2. GiroCode & 7. C24 Standard (exact identical standards-conforming payload)
+                const c24Payload = buildEpc06912Payload({
+                    beneficiaryName: name,
+                    iban: iban,
+                    bic: bic,
+                    amount: amountFormatted,
+                    remittanceInformation: reference
+                });
+                renderQrCode('qr-epc', c24Payload);
+                renderQrCode('qr-girocode', c24Payload);
+                renderQrCode('qr-c24', c24Payload);
+
+                // 3. BezahlCode (German bank standard payload)
+                const bezahlString = `BEZAHLCODE:v1?IBAN=${encodeURIComponent(iban)}&BIC=${encodeURIComponent(bic)}&NAME=${encodeURIComponent(name)}&AMOUNT=${encodeURIComponent(amountVal.toFixed(2))}&CURRENCY=EUR&REASON=${encodeURIComponent(reference)}`;
+                renderQrCode('qr-bezahlcode', bezahlString);
+
+                // 4. EPS (Austria Stuzza standard)
+                const epsPayload = buildEpc06912Payload({
+                    beneficiaryName: name,
+                    iban: iban,
+                    bic: bic,
+                    amount: amountFormatted,
+                    remittanceInformation: reference
+                });
+                renderQrCode('qr-eps', epsPayload);
+
+                // 5. Pay by Square (Slovak National Payment Standard)
+                const bySquareString = `BYSQ:1:1:BNF:${name}:IBAN:${iban}:AM:${amountVal.toFixed(2)}:CUR:EUR:CC:SK:MSG:${reference}`;
+                renderQrCode('qr-bysquare', bySquareString);
+
+                // 6. HUB3 (Croatian Payment Slip Standard)
+                const hub3String = `HUB3\nEUR\n${Math.round(amountVal * 100)}\n${name}\n\n\n${iban}\n${bic}\n${reference}\nOTHR\n`;
+                renderQrCode('qr-hub3', hub3String);
+
+            } catch (err) {
+                errorDiv.textContent = err.message;
+                errorDiv.classList.remove('hidden');
+            }
+
+            // Generate RFC 8905 Payto Link
+            let paytoUrl = `payto://iban/${iban}`;
+            let queryParams = [];
+            if (name) queryParams.push(`recipient-name=${encodeURIComponent(name)}`);
+            if (bic) queryParams.push(`bic=${encodeURIComponent(bic)}`);
+            if (amountVal > 0) queryParams.push(`amount=EUR-${amountVal.toFixed(2)}`);
+            if (reference) {
+                if (refType === 'structured') {
+                    queryParams.push(`creditor-reference=${encodeURIComponent(reference)}`);
+                } else {
+                    queryParams.push(`message=${encodeURIComponent(reference)}`);
+                }
+            }
+            if (queryParams.length > 0) paytoUrl += "?" + queryParams.join("&");
+            
+            paytoAnchor.textContent = paytoUrl;
+            paytoAnchor.href = paytoUrl;
+        }
+
+        function renderQrCode(containerId, text) {
+            try {
+                const qr = qrcode(0, 'M');
+                qr.addData(text);
+                qr.make();
+                const qrSvgMarkup = qr.createSvgTag({ scalable: true, margin: 4 });
+                const container = document.getElementById(containerId);
+                container.innerHTML = qrSvgMarkup;
+                const svgEl = container.querySelector('svg');
+                if (svgEl) {
+                    svgEl.setAttribute('class', 'w-full h-auto max-w-[85px] max-h-[85px]');
+                }
+            } catch (err) {
+                console.error(containerId, err);
+            }
+        }
+
+        function downloadQrSvg(type) {
+            const container = document.getElementById(`qr-${type}`);
+            const svgEl = container.querySelector('svg');
+            if (!svgEl) return;
+            const svgData = new XMLSerializer().serializeToString(svgEl);
+            const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${type}-code.svg`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function downloadQrPng(type) {
+            const container = document.getElementById(`qr-${type}`);
+            const svgEl = container.querySelector('svg');
+            if (!svgEl) return;
+            const svgData = new XMLSerializer().serializeToString(svgEl);
+            const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+            const URL = window.URL || window.webkitURL || window;
+            const blobURL = URL.createObjectURL(svgBlob);
+            
+            const image = new Image();
+            image.onload = function () {
+                const canvas = document.createElement('canvas');
+                canvas.width = 500;
+                canvas.height = 500;
+                const context = canvas.getContext('2d');
+                context.fillStyle = '#FFFFFF';
+                context.fillRect(0, 0, canvas.width, canvas.height);
+                context.drawImage(image, 0, 0, canvas.width, canvas.height);
+                
+                canvas.toBlob(function (pngBlob) {
+                    const pngUrl = URL.createObjectURL(pngBlob);
+                    const a = document.createElement('a');
+                    a.href = pngUrl;
+                    a.download = `${type}-code.png`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(pngUrl);
+                }, 'image/png');
+            };
+            image.src = blobURL;
+        }
+
+        function copyPaytoLink() {
+            const text = document.getElementById('paytoLinkAnchor').textContent;
+            const copyBtnText = document.getElementById('copyText');
+            
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            try {
+                document.execCommand('copy');
+                copyBtnText.textContent = "Copied!";
+                setTimeout(() => { copyBtnText.textContent = "Copy"; }, 2000);
+            } catch (err) {
+                console.error('Failed to copy', err);
+            }
+            document.body.removeChild(textArea);
+        }
+
+        window.onload = function() {
+            loadExample();
+        };
+    </script>
+</body>
+</html>
